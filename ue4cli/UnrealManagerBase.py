@@ -484,7 +484,7 @@ class UnrealManagerBase(object):
 		else:
 			self.packagePlugin(dir, args)
 	
-	def runAutomationCommands(self, projectFile, commands, extraArgs, capture=False, enableRHI=False):
+	def runAutomationCommands(self, projectFile, mapAssetPath, commands, extraArgs, capture=False, enableRHI=False):
 		'''
 		Invokes the Automation Test commandlet for the specified project with the supplied automation test commands
 		'''
@@ -499,11 +499,22 @@ class UnrealManagerBase(object):
 		# argument payload will be stripped out, corrupting our list of automation commands and
 		# preventing them from executing correctly.
 		
-		command = '{} {}'.format(Utility.escapePathForShell(self.getEditorBinary(True)), Utility.escapePathForShell(projectFile))
-		command += ' -game -buildmachine -stdout -fullstdoutlogoutput -forcelogflush -unattended -nopause -nosplash'
+		command = '{} {} {}'.format(Utility.escapePathForShell(self.getEditorBinary(True)), Utility.escapePathForShell(projectFile), mapAssetPath)
+
+		# Mod by j.reich: Removed -fullstdoutlogoutput -forcelogflush as default args
+		# -forcelogflush
+		# 		does not seem to have much effect, but is incompatible with executing all anim tests
+		# 		(see warning in Engine\UE4\Plugins\NetcodeUnitTest\NetcodeUnitTest\Source\NetcodeUnitTest\Private\UnitTestManager.cpp : 1757)
+		# -fullstdoutlogoutput
+		# 		breaks unit tests by making everything super slow and also somehow breaking the exit condition
+		# 		-> causes regular engine tick with crash after test execution for some reason.
+		command += ' -game -buildmachine -stdout -unattended -nopause -nosplash'
 		if enableRHI == False:
 			command += ' -nullrhi'
-		command += ' -ExecCmds="automation {};quit" '.format(';'.join(commands))
+
+		# Mod by j.reich: Removed automation command. Must be passed as one of the other parameters.
+		# Instead it's added by default in runAutomationTests so the CLI behavior stays consistent.
+		command += ' -ExecCmds="{};quit" '.format(';'.join(commands))
 		command += ' '.join([Utility.escapePathForShell(a) for a in extraArgs])
 		
 		if capture == True:
@@ -511,7 +522,7 @@ class UnrealManagerBase(object):
 		else:
 			Utility.run(command, shell=True)
 	
-	def listAutomationTests(self, projectFile):
+	def listAutomationTests(self, projectFile, mapAssetPath = ''):
 		'''
 		Returns the list of supported automation tests for the specified project
 		'''
@@ -519,7 +530,7 @@ class UnrealManagerBase(object):
 		# Attempt to retrieve the list of automation tests
 		tests = set()
 		testRegex = re.compile('.*LogAutomationCommandLine: Display: \t(.+)')
-		logOutput = self.runAutomationCommands(projectFile, ['List'], [], capture=True)
+		logOutput = self.runAutomationCommands(projectFile, mapAssetPath, ['automation List'], [], capture=True)
 		for line in logOutput.stdout.split('\n'):
 			matches = testRegex.search(line)
 			if matches != None:
@@ -573,19 +584,19 @@ class UnrealManagerBase(object):
 			
 			# Determine if we are enqueueing a 'RunAll' command
 			if runAll == True:
-				command.append('RunAll')
+				command.append('automation RunAll')
 			
 			# Determine if we are enqueueing a 'RunFilter' command
 			if runFilter == True and len(sanitised) > 0:
-				command.append('RunFilter ' + sanitised.pop(0))
+				command.append('automation RunFilter ' + sanitised.pop(0))
 			
 			# Enqueue a 'RunTests' command for any individual test names that were specified
 			if len(sanitised) > 0:
-				command.append('RunTests Now ' + '+'.join(sanitised))
+				command.append('automation RunTests Now ' + '+'.join(sanitised))
 			
 			# Attempt to run the automation tests
 			Utility.printStderr('Running automation tests...')
-			logOutput = self.runAutomationCommands(projectFile, command, extraArgs, capture=True, enableRHI=enableRHI)
+			logOutput = self.runAutomationCommands(projectFile, '', command, extraArgs, capture=True, enableRHI=enableRHI)
 			
 			# Propagate the log output
 			print(logOutput.stdout)
@@ -629,7 +640,7 @@ class UnrealManagerBase(object):
 		# preventing them from executing correctly.
 
 		command = '{} {} -run={}'.format(Utility.escapePathForShell(self.getEditorBinary(True)), Utility.escapePathForShell(projectFile), commandletName)
-		command += ' -buildmachine -stdout -fullstdoutlogoutput -forcelogflush -unattended -nopause -nosplash'
+		command += ' -buildmachine -stdout -unattended -nopause -nosplash'
 		if enableRHI == False:
 			command += ' -nullrhi'
 		else:
