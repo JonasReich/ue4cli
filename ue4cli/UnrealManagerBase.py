@@ -595,6 +595,34 @@ class UnrealManagerBase(object):
 			match = re.search('TEST COMPLETE\\. EXIT CODE: ([0-9]+)', logOutput.stdout + logOutput.stderr)
 			if match is not None:
 				sys.exit(int(match.group(1)))
+
+	def runCommandlet(self, projectFile, commandletName, extraArgs, capture=False, enableRHI=False):
+		'''
+		Invokes an arbitrary commandlet for the specified project with the supplied parameters
+		'''
+		
+		# IMPORTANT IMPLEMENTATION NOTE:
+		# We need to format the command as a string and execute it using a shell in order to
+		# ensure the "-ExecCmds" argument will be parsed correctly under Windows. This is because
+		# the WinMain() function uses GetCommandLineW() to retrieve the raw command-line string,
+		# rather than using an argv-style structure. The string is then passed to FParse::Value(),
+		# which checks for the presence of a quote character after the equals sign to determine if
+		# whitespace should be stripped or preserved. Without the quote character, the spaces in the
+		# argument payload will be stripped out, corrupting our list of automation commands and
+		# preventing them from executing correctly.
+
+		command = '{} {} -run={}'.format(Utility.escapePathForShell(self.getEditorBinary(True)), Utility.escapePathForShell(projectFile), commandletName)
+		command += ' -buildmachine -stdout -fullstdoutlogoutput -forcelogflush -unattended -nopause -nosplash'
+		if enableRHI == False:
+			command += ' -nullrhi'
+		else:
+			command += ' -AllowCommandletRendering'
+		command += ' '.join([Utility.escapePathForShell(a) for a in extraArgs])
+		
+		if capture == True:
+			return Utility.capture(command, shell=True)
+		else:
+			Utility.run(command, shell=True)
 	
 	# "Protected" methods
 	
