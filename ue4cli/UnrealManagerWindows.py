@@ -57,6 +57,27 @@ class UnrealManagerWindows(UnrealManagerBase):
 			Utility.run([genScript, projectFile], raiseOnError=True)
 		else:
 			super(UnrealManagerWindows, self).generateProjectFiles(dir, args)
+
+	def _getEngineRootFromAssocationKey(self, engineAssociationKey):
+		# First check for entries of custom builds in HKEY_CURRENT_USER:
+		try:
+			
+			key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 'SOFTWARE\\Epic Games\\Unreal Engine\\Builds')
+			if key:
+				customBuildPath = winreg.QueryValueEx(key, engineAssociationKey)[0]
+				if os.path.exists(customBuildPath):
+					return customBuildPath
+		except:
+			pass
+		
+		# If the first attempt, also check HKEY_LOCAL_MACHINE for installed engines:
+		try:
+			key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, f'SOFTWARE\\EpicGames\\Unreal Engine\\{engineAssociationKey}')
+			return winreg.QueryValueEx(key, 'InstalledDirectory')[0]
+		except:
+			pass
+
+		return ''
 	
 	def _detectEngineRoot(self):
 		

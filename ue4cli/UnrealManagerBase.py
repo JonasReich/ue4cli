@@ -5,7 +5,7 @@ from .UE4BuildInterrogator import UE4BuildInterrogator
 from .CachedDataManager import CachedDataManager
 from .CMakeCustomFlags import CMakeCustomFlags
 from .Utility import Utility
-import glob, hashlib, json, os, re, shutil, sys
+import glob, hashlib, json, os, re, shutil, sys, configparser
 
 class UnrealManagerBase(object):
 	"""
@@ -45,6 +45,23 @@ class UnrealManagerBase(object):
 			self.getEngineVersion()
 		except:
 			print('Warning: the specified directory does not appear to contain a valid version of the Unreal Engine.')
+
+	def setEngineRootOverrideFromProjectFile(self, projectFile):
+		"""
+		Sets the engine directory based on the engine association field.
+		"""
+
+		with open(projectFile, 'r') as f:
+			projectFileJson = json.load(f)
+			engineAssociationKey = projectFileJson["EngineAssociation"]
+			print(f'Detected engine association key {engineAssociationKey} from uproject file')
+			engineAssociationRoot = self._getEngineRootFromAssocationKey(engineAssociationKey)
+			if engineAssociationRoot == '':
+				raise FileNotFoundError(f'Engine root could not be found based on engine association key {engineAssociationKey}. '
+					f'Please make sure the target engine is installed and registrered. '
+					f'Also check if setEngineRootOverrideFromProjectFile is implemented for your current platform!')
+			print(f'Determined engine root base on engine association key: {engineAssociationRoot}')
+			self.setEngineRootOverride(engineAssociationRoot)
 	
 	def clearEngineRootOverride(self):
 		"""
@@ -636,6 +653,12 @@ class UnrealManagerBase(object):
 			return override
 		else:
 			return self._detectEngineRoot()
+
+	def _getEngineRootFromAssocationKey(self, engineAssociationKey):
+		"""
+		Looks up the engine root folder in the registry, etc. based on the provided association key (from project file)
+		"""
+		return ""
 	
 	def _detectEngineRoot(self):
 		"""
