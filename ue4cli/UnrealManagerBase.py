@@ -645,12 +645,15 @@ class UnrealManagerBase(object):
 			command += ' -nullrhi'
 		else:
 			command += ' -AllowCommandletRendering'
-		command += ' '.join([Utility.escapePathForShell(a) for a in extraArgs])
+
+		if len(extraArgs) > 0:
+			command += ' '
+			command += ' '.join([Utility.escapePathForShell(a) for a in extraArgs])
 		
 		if capture == True:
 			return Utility.capture(command, shell=True)
 		else:
-			Utility.run(command, shell=True)
+			return Utility.run(command, shell=True)
 	
 	# "Protected" methods
 	
