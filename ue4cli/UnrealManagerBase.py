@@ -520,7 +520,7 @@ class UnrealManagerBase(object):
 		if capture == True:
 			return Utility.capture(command, shell=True)
 		else:
-			Utility.run(command, shell=True)
+			return Utility.run(command, shell=True)
 	
 	def listAutomationTests(self, projectFile, mapAssetPath = ''):
 		'''
