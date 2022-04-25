@@ -515,7 +515,7 @@ class UnrealManagerBase(object):
 		# Mod by j.reich: Removed automation command. Must be passed as one of the other parameters.
 		# Instead it's added by default in runAutomationTests so the CLI behavior stays consistent.
 		command += ' -ExecCmds="{};quit" '.format(';'.join(commands))
-		command += ' '.join([Utility.escapePathForShell(a) for a in extraArgs])
+		command += ' '.join(extraArgs)
 		
 		if capture == True:
 			return Utility.capture(command, shell=True)
@@ -648,7 +648,7 @@ class UnrealManagerBase(object):
 
 		if len(extraArgs) > 0:
 			command += ' '
-			command += ' '.join([Utility.escapePathForShell(a) for a in extraArgs])
+			command += ' '.join(extraArgs)
 		
 		if capture == True:
 			return Utility.capture(command, shell=True)
